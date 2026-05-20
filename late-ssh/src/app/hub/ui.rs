@@ -16,6 +16,11 @@ use crate::app::{
 pub const MODAL_WIDTH: u16 = 124;
 pub const MODAL_HEIGHT: u16 = 40;
 
+const _: () = {
+    assert!(MODAL_HEIGHT >= 30);
+    assert!(MODAL_WIDTH >= 80);
+};
+
 pub fn draw(
     frame: &mut Frame,
     area: Rect,
@@ -106,15 +111,4 @@ fn centered_rect(width: u16, height: u16, area: Rect) -> Rect {
         .flex(Flex::Center)
         .areas(area);
     area
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn modal_dimensions_fit_settings_neighborhood() {
-        assert!(MODAL_HEIGHT >= 30);
-        assert!(MODAL_WIDTH >= 80);
-    }
 }
