@@ -283,10 +283,11 @@ pub struct App {
     pub(crate) rooms_chat_rows_cache: chat::ui::ChatRowsCache,
     pub(crate) room_search_modal_state: crate::app::room_search_modal::state::RoomSearchModalState,
     pub(crate) booth_modal_state: crate::app::audio::booth::state::BoothModalState,
-    /// Server-authoritative audio source for the paired browser. Mirrors
-    /// `users.settings.audio_source`. v+x flips this, persists it to the DB,
-    /// and pushes `SetPlaybackSource` to the browser. On browser pair-up the
-    /// current value is replayed so a refresh lands in the right mode.
+    /// Server-authoritative audio source for the paired playback surface.
+    /// Mirrors `users.settings.audio_source`. v+x flips this, persists it to
+    /// the DB, and pushes `SetPlaybackSource` to browsers and YouTube-capable
+    /// CLI control-plane clients. On browser pair-up the current value is
+    /// replayed so a refresh lands in the right mode.
     pub(crate) paired_browser_source: late_core::models::user::AudioSource,
 
     pub(crate) vote_prefix_armed: bool,
@@ -629,11 +630,7 @@ impl App {
             active_users: active_users.clone(),
             activity_feed_rx: config.activity_feed_rx,
             activity,
-            audio: crate::app::audio::state::AudioState::new(
-                config.audio_service,
-                config.user_id,
-                config.session_token,
-            ),
+            audio: crate::app::audio::state::AudioState::new(config.audio_service, config.user_id),
             user_id: config.user_id,
             permissions: config.permissions,
             is_admin: config.permissions.is_admin(),
@@ -906,21 +903,16 @@ impl App {
         registry.send_control(&self.session_token, PairControlMessage::VolumeDown)
     }
 
-    /// Push the currently-stored audio source to all paired browsers. Called
-    /// when a browser registers so a fresh page reflects the persisted choice
-    /// plus whether the browser is allowed to play Icecast (only when no CLI
-    /// is paired).
+    /// Push the currently-stored audio source to all paired entries. Called
+    /// when a browser registers so every playback surface reflects the
+    /// persisted choice plus the current surface policy: browser Icecast only
+    /// when no CLI is paired, and embedded CLI webview only when no real
+    /// browser is paired.
     pub fn replay_paired_browser_source(&self) {
         let Some(registry) = self.paired_client_registry.as_ref() else {
             return;
         };
-        registry.send_control_to_browsers(
-            &self.session_token,
-            PairControlMessage::SetPlaybackSource {
-                source: self.paired_browser_source,
-                web_icecast_enabled: registry.web_icecast_enabled(&self.session_token),
-            },
-        );
+        registry.broadcast_playback_source_for_token(&self.session_token);
     }
 
     /// Flip the per-user audio source preference. Persisted server-side; the
@@ -935,6 +927,11 @@ impl App {
             AudioSource::Youtube => AudioSource::Icecast,
         };
         self.paired_browser_source = next;
+        if let Some(active_users) = &self.active_users
+            && let Some(active) = active_users.lock_recover().get_mut(&self.user_id)
+        {
+            active.audio_source = next;
+        }
         self.audio.persist_audio_source(next);
         next
     }
