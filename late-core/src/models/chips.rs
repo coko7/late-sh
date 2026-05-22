@@ -7,6 +7,14 @@ use uuid::Uuid;
 
 pub const CHIP_FLOOR: i64 = 100;
 pub const INITIAL_CHIP_BALANCE: i64 = 1_000;
+pub const CHIP_USER_CHANGED_CHANNEL: &str = "chip_user_changed";
+
+pub async fn listen_for_chip_changes(client: &Client) -> Result<()> {
+    client
+        .batch_execute(&format!("LISTEN {CHIP_USER_CHANGED_CHANNEL};"))
+        .await?;
+    Ok(())
+}
 
 /// Map a difficulty key to its chip bonus.
 pub fn difficulty_bonus(key: &str) -> i64 {
@@ -77,9 +85,18 @@ impl UserChips {
                     FROM upserted
                     WHERE $2 <> 0
                     RETURNING 1
+                 ),
+                 chip_notify AS (
+                    SELECT pg_notify($3, user_id::text)
+                    FROM upserted
+                    WHERE $2 <> 0
+                 ),
+                 chip_notified AS (
+                    SELECT count(*) FROM chip_notify
                  )
-                 SELECT * FROM upserted",
-                &[&user_id, &amount],
+                 SELECT upserted.*
+                 FROM upserted, chip_notified",
+                &[&user_id, &amount, &CHIP_USER_CHANGED_CHANNEL],
             )
             .await?;
         Ok(Self::from(row))
@@ -103,9 +120,18 @@ impl UserChips {
                     FROM updated
                     WHERE $2 <> 0
                     RETURNING 1
+                 ),
+                 chip_notify AS (
+                    SELECT pg_notify($3, user_id::text)
+                    FROM updated
+                    WHERE $2 <> 0
+                 ),
+                 chip_notified AS (
+                    SELECT count(*) FROM chip_notify
                  )
-                 SELECT * FROM updated",
-                &[&user_id, &amount],
+                 SELECT updated.*
+                 FROM updated, chip_notified",
+                &[&user_id, &amount, &CHIP_USER_CHANGED_CHANNEL],
             )
             .await?;
         Ok(row.map(Self::from))
@@ -137,9 +163,18 @@ impl UserChips {
                     FROM restored
                     WHERE delta > 0
                     RETURNING 1
+                 ),
+                 chip_notify AS (
+                    SELECT pg_notify($3, $1::text)
+                    FROM restored
+                    WHERE delta > 0
+                 ),
+                 chip_notified AS (
+                    SELECT count(*) FROM chip_notify
                  )
-                 SELECT * FROM upserted",
-                &[&user_id, &CHIP_FLOOR],
+                 SELECT upserted.*
+                 FROM upserted, chip_notified",
+                &[&user_id, &CHIP_FLOOR, &CHIP_USER_CHANGED_CHANNEL],
             )
             .await?;
         Ok(Self::from(row))
