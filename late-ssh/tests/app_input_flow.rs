@@ -964,7 +964,7 @@ async fn members_command_shows_room_members_without_persisting_message() {
     wait_for_render_contains(&mut app, "lounge").await;
     wait_for_render_contains(&mut app, "side").await;
 
-    app.handle_input(b"ll");
+    app.handle_input(b"lll");
 
     app.handle_input(b"i/members\r");
     wait_for_render_contains(&mut app, "#side Members").await;
