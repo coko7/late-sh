@@ -480,16 +480,17 @@ pub fn draw_pinstar_view(
                     }
                 };
 
-                let draw_arrow = |buf: &mut ratatui::prelude::Buffer, ch: char, col: i32, row: i32| {
-                    if col >= canvas_area.left() as i32
-                        && col < canvas_area.right() as i32
-                        && row >= canvas_area.top() as i32
-                        && row < canvas_area.bottom() as i32
-                        && let Some(cell) = buf.cell_mut((col as u16, row as u16))
-                    {
-                        cell.set_char(ch).set_fg(edge_color);
-                    }
-                };
+                let draw_arrow =
+                    |buf: &mut ratatui::prelude::Buffer, ch: char, col: i32, row: i32| {
+                        if col >= canvas_area.left() as i32
+                            && col < canvas_area.right() as i32
+                            && row >= canvas_area.top() as i32
+                            && row < canvas_area.bottom() as i32
+                            && let Some(cell) = buf.cell_mut((col as u16, row as u16))
+                        {
+                            cell.set_char(ch).set_fg(edge_color);
+                        }
+                    };
 
                 let use_orthogonal = state.orthogonal_connections;
 
@@ -705,16 +706,18 @@ pub fn draw_pinstar_view(
         };
 
         let mut border_type = text_border_override.map_or_else(
-            || text_shape.map_or_else(
-                || BorderType::Plain,
-                |s| match s {
-                    TextNodeShape::Rectangle => BorderType::Plain,
-                    TextNodeShape::Diamond => BorderType::Double,
-                    TextNodeShape::Circle => BorderType::Rounded,
-                    TextNodeShape::Cylinder => BorderType::Thick,
-                    TextNodeShape::Stadium => BorderType::Rounded,
-                },
-            ),
+            || {
+                text_shape.map_or_else(
+                    || BorderType::Plain,
+                    |s| match s {
+                        TextNodeShape::Rectangle => BorderType::Plain,
+                        TextNodeShape::Diamond => BorderType::Double,
+                        TextNodeShape::Circle => BorderType::Rounded,
+                        TextNodeShape::Cylinder => BorderType::Thick,
+                        TextNodeShape::Stadium => BorderType::Rounded,
+                    },
+                )
+            },
             |b| match b {
                 TextNodeBorder::Plain => BorderType::Plain,
                 TextNodeBorder::Rounded => BorderType::Rounded,
@@ -750,17 +753,18 @@ pub fn draw_pinstar_view(
             }
         };
 
-        if matches!(node, crate::app::pinstar::data::CanvasNode::Text(_)) && !is_editing {
-            if let Some(shape) = text_shape {
-                let shape_badge = match shape {
-                    TextNodeShape::Rectangle => "□ ",
-                    TextNodeShape::Diamond => "◇ ",
-                    TextNodeShape::Circle => "◯ ",
-                    TextNodeShape::Cylinder => "⛁ ",
-                    TextNodeShape::Stadium => "⬭ ",
-                };
-                node_title = format!("{}{}", shape_badge, node_title);
-            }
+        if matches!(node, crate::app::pinstar::data::CanvasNode::Text(_))
+            && !is_editing
+            && let Some(shape) = text_shape
+        {
+            let shape_badge = match shape {
+                TextNodeShape::Rectangle => "□ ",
+                TextNodeShape::Diamond => "◇ ",
+                TextNodeShape::Circle => "◯ ",
+                TextNodeShape::Cylinder => "⛁ ",
+                TextNodeShape::Stadium => "⬭ ",
+            };
+            node_title = format!("{}{}", shape_badge, node_title);
         }
 
         if is_editing {
@@ -850,7 +854,8 @@ pub fn draw_pinstar_view(
                     let mut est_lines = 0;
                     for line in display_text.lines() {
                         let char_count = line.chars().count();
-                        let needed = ((char_count as f32) / (text_rect.width as f32)).ceil() as usize;
+                        let needed =
+                            ((char_count as f32) / (text_rect.width as f32)).ceil() as usize;
                         est_lines += needed.max(1);
                     }
                     let est_lines = est_lines.max(1);

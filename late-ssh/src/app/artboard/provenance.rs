@@ -64,9 +64,7 @@ impl ArtboardProvenance {
                         dartboard_core::CellWrite::Paint { pos, ch, .. } => {
                             self.paint_on(before, *pos, *ch, username);
                         }
-                        dartboard_core::CellWrite::Clear { pos } => {
-                            self.clear_on(before, *pos)
-                        }
+                        dartboard_core::CellWrite::Clear { pos } => self.clear_on(before, *pos),
                     }
                 }
             }

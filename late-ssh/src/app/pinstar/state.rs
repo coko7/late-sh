@@ -1727,7 +1727,9 @@ impl PinstarState {
     }
 
     pub fn finalize_move_tracking(&mut self) {
-        if self.active_move_changed && let Some(snapshot) = self.active_move_start.take() {
+        if self.active_move_changed
+            && let Some(snapshot) = self.active_move_start.take()
+        {
             self.last_move_undo = Some(snapshot);
 
             // Commit final positions in shared mode (one op per node at final position)

@@ -46,7 +46,6 @@ pub enum BrowserMode {
     ImportCanvas,
 }
 
-
 #[derive(Debug, Clone)]
 pub enum BrowserAction {
     Create { title: String },

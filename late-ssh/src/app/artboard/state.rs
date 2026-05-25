@@ -4,11 +4,11 @@ use dartboard_editor::{
     EditorPointerDispatch, EditorSession, FloatingSelection as EditorFloatingSelection, KeyMap,
     Mode as EditorMode, MoveDir, SWATCH_CAPACITY, Selection as EditorSelection,
     SelectionShape as EditorSelectionShape, Swatch, SwatchActivation, Viewport,
-    backspace as editor_backspace, capture_bounds, capture_selection, delete_at_cursor,
-    diff_canvas_op, dismiss_floating as editor_dismiss_floating,
+    backspace as editor_backspace, capture_bounds, capture_selection, diff_canvas_op,
+    dismiss_floating as editor_dismiss_floating,
     export_system_clipboard_text as editor_export_system_clipboard_text,
     handle_editor_action as editor_handle_action, handle_editor_pointer as editor_handle_pointer,
-    insert_char as editor_insert_char, paste_text_block, stamp_floating as editor_stamp_floating,
+    paste_text_block, stamp_floating as editor_stamp_floating,
 };
 use dartboard_tui::{FloatingView, SelectionShape as TuiSelectionShape, SelectionView};
 use ratatui::layout::Rect;
@@ -516,10 +516,13 @@ impl State {
 
     fn owner_overlay_canvas(&self, width: u16, height: u16) -> Canvas {
         let origin = self.viewport_origin();
-        if let Some((cached_origin, cached_w, cached_h, cached_canvas)) = &*self.owner_overlay_cache.borrow() {
-            if *cached_origin == origin && *cached_w == width && *cached_h == height {
-                return cached_canvas.clone();
-            }
+        if let Some((cached_origin, cached_w, cached_h, cached_canvas)) =
+            &*self.owner_overlay_cache.borrow()
+            && *cached_origin == origin
+            && *cached_w == width
+            && *cached_h == height
+        {
+            return cached_canvas.clone();
         }
 
         let mut canvas = self.snapshot.canvas.clone();
@@ -1190,9 +1193,7 @@ impl State {
                 let fg_match = self.snapshot.canvas.fg(*pos) == Some(*fg);
                 !(cell_match && fg_match)
             }
-            CanvasOp::ClearCell { pos } => {
-                self.snapshot.canvas.cell(*pos).is_some()
-            }
+            CanvasOp::ClearCell { pos } => self.snapshot.canvas.cell(*pos).is_some(),
             _ => true,
         };
 
@@ -1471,14 +1472,13 @@ fn clear_bounds_on(canvas: &mut Canvas, bounds: Bounds) {
     for y in bounds.min_y..=bounds.max_y {
         for x in bounds.min_x..=bounds.max_x {
             let pos = Pos { x, y };
-            if let Some(origin) = canvas.glyph_origin(pos) {
-                if origin.x >= bounds.min_x
-                    && origin.x <= bounds.max_x
-                    && origin.y >= bounds.min_y
-                    && origin.y <= bounds.max_y
-                {
-                    canvas.clear(pos);
-                }
+            if let Some(origin) = canvas.glyph_origin(pos)
+                && origin.x >= bounds.min_x
+                && origin.x <= bounds.max_x
+                && origin.y >= bounds.min_y
+                && origin.y <= bounds.max_y
+            {
+                canvas.clear(pos);
             }
         }
     }
