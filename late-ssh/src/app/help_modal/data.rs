@@ -809,7 +809,8 @@ mod tests {
         assert!(context.contains("/paste-image"));
         assert!(context.contains("This is CLI-only"));
         assert!(context.contains("The original-quality image is the uploaded/copied URL."));
-        assert!(context.contains("Kitty protocol: kitty, Ghostty, wezterm, rio, warp, Konsole."));
+        assert!(context.contains("Kitty protocol: kitty, Ghostty, rio, warp, Konsole."));
+        assert!(context.contains("iTerm2 inline images: iTerm2, WezTerm, mintty, hterm."));
     }
 
     #[test]
