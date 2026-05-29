@@ -162,9 +162,8 @@ fn pick_composer_title_text(view: &ComposerBlockView<'_>, block_width: u16) -> S
             let long = format!(
                 " Reply to @{author} (Enter send & stay, Alt+Enter/Ctrl+J newline, Esc cancel) "
             );
-            let mid = format!(
-                " Reply to @{author} (⏎ send & stay, Alt+⏎/Ctrl+J newline, Esc cancel) "
-            );
+            let mid =
+                format!(" Reply to @{author} (⏎ send & stay, Alt+⏎/Ctrl+J newline, Esc cancel) ");
             let short = format!(" Reply to @{author} (⏎ send, Esc cancel) ");
             let minimal = format!(" Reply to @{author} (Esc) ");
             let name_only = format!(" Reply to @{author} ");

@@ -8,10 +8,10 @@ use super::chips::INITIAL_CHIP_BALANCE;
 use super::user::{
     RIGHT_SIDEBAR_SCREEN_COUNT, RightSidebarMode, User, extract_bio, extract_birthday,
     extract_country, extract_enable_background_color, extract_favorite_room_ids, extract_ide,
-    extract_langs, extract_notify_bell, extract_notify_cooldown_mins, extract_notify_format,
-    extract_notify_kinds, extract_os, extract_right_sidebar_mode, extract_right_sidebar_screens,
-    extract_show_dashboard_header, extract_show_right_sidebar, extract_show_room_list_sidebar,
-    extract_keep_composer_focused, extract_show_settings_on_connect,
+    extract_keep_composer_focused, extract_langs, extract_notify_bell,
+    extract_notify_cooldown_mins, extract_notify_format, extract_notify_kinds, extract_os,
+    extract_right_sidebar_mode, extract_right_sidebar_screens, extract_show_dashboard_header,
+    extract_show_right_sidebar, extract_show_room_list_sidebar, extract_show_settings_on_connect,
     extract_start_with_music_muted, extract_terminal, extract_theme_id, extract_timezone,
 };
 
