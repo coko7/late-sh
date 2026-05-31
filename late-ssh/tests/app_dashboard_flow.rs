@@ -37,7 +37,7 @@ async fn question_mark_opens_pair_guide_first() {
     wait_for_render_contains(&mut app, "Install `late` / Pair Browser").await;
     wait_for_render_contains(&mut app, "https://cli.late.sh/install.sh | bash").await;
     wait_for_render_contains(&mut app, "https://cli.late.sh/install.ps1 | iex").await;
-    wait_for_render_contains(&mut app, "Browser pairing").await;
+    wait_for_render_contains(&mut app, "What `late` unlocks").await;
 }
 
 #[tokio::test]
