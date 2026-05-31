@@ -681,7 +681,7 @@ fn shortcuts_hint_line(width: usize) -> Line<'static> {
 
     let leading = "   ";
     let key1 = "?";
-    let text1 = "  app tour";
+    let text1 = "  Guide";
     let separator = "      ";
     let key2 = "Ctrl+O";
     let text2 = "  reopen settings anywhere";

@@ -3,7 +3,7 @@
 ## Metadata
 - Domain: late.sh - Command-Line Clubhouse for Computer People
 - Primary audience: LLM agents working on this codebase, human contributors
-- Last updated: 2026-05-30 (root routing index covers every known local `CONTEXT.md`: `late-cli`, `late-web`, and `late-ssh/src/app/{arcade,artboard,audio,bonsai_v2,chat,games,hub,rooms}`)
+- Last updated: 2026-06-01 (global guide consolidation: Pair, split terminal FAQ topics, and former Hub Guide content now live in `late-ssh/src/app/help_modal`; `Ctrl+R` and `Ctrl+L` help modals removed; Hub Guide tab removed)
 - Status: Active
 - Stability note: Sections marked `[STABLE]` should change rarely. Sections marked `[VOLATILE]` are expected to change often.
 
@@ -990,16 +990,16 @@ The human owner may use narrower crate-specific `cargo test` / `cargo nextest ru
 
 Toast notification is hidden by default (0 rows). When active, it appears as a 3-row bordered block (green for success, red for error) at the **top-right** of the content area. The settings overlay renders on top of the toast.
 
-### Terminal-help modal (Ctrl+L) [STABLE]
+### Global guide (`?`) [STABLE]
 
-Standalone overlay that explains the terminal-side reasons clipboard, link clicks, text selection, and notifications can misbehave inside late.sh. It is advertised by the bottom-left outer-frame shortcut hint, which displays `Ctrl+L` alongside the other reserved globals.
+One global overlay owns general app help plus the former Pair, terminal FAQ, and Hub Guide content. `?` opens it globally when not composing, except Artboard and Pinstar keep their local page help. The default/first tab is Pair, so the session-specific browser pairing link and QR are always one key away from Home/dashboard hints.
 
-- Module: `late-ssh/src/app/terminal_help_modal/` (`mod.rs`, `data.rs`, `state.rs`, `input.rs`, `ui.rs`).
-- State flag on `App`: `show_terminal_help` paired with `terminal_help_modal_state`.
-- Opening: global `Ctrl+L` (byte `0x0C`) in `app/input.rs`. The reserved global chord handler closes other top-level modals first and toggles the flag, so `Ctrl+L` again dismisses. Active Artboard editing is the only exception; the editor owns raw control bytes there.
-- Outer frame: `app/render.rs::app_frame_help_hint_title()` adds a `title_bottom` line on the main border, mirroring `app_frame_sponsor_title()` but left-aligned so the hint sits at the bottom-left corner.
-- Tabs (in order): Copy, Links, Selection, Notifications. Tab order, copy, and accuracy live in `data.rs::lines_for()`.
-- Footer keys: `Tab/S+Tab` switch tabs, `j/k`/arrows scroll, `Esc/q/Ctrl+L` close.
+- Module: `late-ssh/src/app/help_modal/`.
+- State flag on `App`: `show_help` paired with `help_modal_state`.
+- Opening: global `?` in `app/input.rs`; `/binds` opens Chat, `/music` opens Music, Bonsai `?` opens Bonsai. `Ctrl+R` and `Ctrl+L` are no longer global help keybindings.
+- Outer frame: `app/render.rs::app_frame_help_hint_title()` advertises `Settings Ctrl+O`, `Hub Ctrl+G`, `Guide ?`, and `Aqua Ctrl+Q`.
+- Topics include Pair, Overview, Chat, Social, Music, News, Games, Copy, Links, Images, Selection, Notifications, CLI YouTube, Economy, Bonsai, Settings, Architecture.
+- Footer keys: `Tab/S+Tab` switch topics, `j/k`/arrows scroll, `Esc/q/?` close.
 
 Content invariants worth preserving when editing `data.rs`:
 - **OSC 52 reality:** kitty / Ghostty / foot / wezterm / st / contour / zellij / hterm / urxvt / alacritty / Konsole (recent) / Windows Terminal (write only) work out of the box. iTerm2 needs *Settings → General → Selection → Applications in terminal may access clipboard*. xterm needs `allowWindowOps: true`. macOS Terminal.app and all VTE-based terminals (GNOME Terminal, Tilix, Terminator, XFCE Terminal) do **not** support OSC 52. tmux requires `set -g set-clipboard on` plus a `terminal-overrides` entry. mosh and GNU screen drop the sequence outright.
@@ -1013,7 +1013,7 @@ Content invariants worth preserving when editing `data.rs`:
 |-----|---------|--------|
 | `q` / `Q` | Global | Open quit confirm; pressing `q` again exits |
 | `?` | Global (not composing) | Open help modal (multi-slide guide). Also works inside the settings modal, which renders help on top while keeping the draft intact. |
-| `h` / `l` / `←` / `→` | Help modal | Switch slides (Overview / Chat / Music / News / Arcade / Bonsai / Settings / Architecture) |
+| `Tab` / `Shift+Tab` | Help modal | Switch topics (Pair / Overview / Chat / Social / Music / News / Games / Copy / Links / Images / Selection / Notifications / CLI YouTube / Economy / Bonsai / Settings / Architecture) |
 | `j` / `k` / `↑` / `↓` | Help modal | Scroll current slide (uncapped — past the last line is blank space) |
 | `Esc` / `q` / `?` | Help modal | Close (returns to the underlying screen, including the settings modal if it was open) |
 | `Tab` | Global | Cycle screens |
@@ -1040,14 +1040,9 @@ Content invariants worth preserving when editing `data.rs`:
 | `Esc` | Active Arcade game | Exit back to Arcade lobby |
 | Arcade game keys | Arcade | See `late-ssh/src/app/arcade/CONTEXT.md` and each game's info panel. |
 | Chat keys | Home / Rooms embedded chat | See `late-ssh/src/app/chat/CONTEXT.md` for room navigation, composer commands, message actions, synthetic entries, favorites, and icon picker behavior. |
-| `Ctrl+R` | Reserved global, except active Artboard editing | Open Remote Audio modal: CLI install options plus browser pairing QR/link. Press again to close. |
 | `Ctrl+O` | Reserved global, except active Artboard editing | Open the settings modal from anywhere, including active Arcade games |
-| `Ctrl+G` | Reserved global, except active Artboard editing | Open Hub on the Leaderboard tab |
+| `Ctrl+G` | Reserved global, except active Artboard editing | Open Hub on the Shop tab |
 | `Ctrl+Q` | Reserved global | Toggle the Shop-unlocked Aquarium bottom tray |
-| `Ctrl+L` | Reserved global, except active Artboard editing | Toggle the terminal-help modal ("Why I cannot copy/open/click links?"). Also closes other top-level modals before opening. |
-| `Tab` / `Shift+Tab` | Terminal-help modal | Switch between Copy / Links / Selection / Notifications tabs |
-| `j` / `k` / `↑` / `↓` | Terminal-help modal | Scroll the current tab |
-| `Esc` / `q` / `Ctrl+L` | Terminal-help modal | Close |
 | `Tab` / `Shift+Tab` | Settings modal | Switch tabs: Settings, Bio, Themes, RSS, Account, and hidden Special when available |
 | `↑` / `↓` / `j` / `k` | Settings modal | Move within the active tab. Settings rows include Username, IDE, Terminal, OS, Langs, Theme, Background, Right sidebar, Room list, Activity boxes, Country, Timezone, DMs, @mentions, Game events, Bell, Cooldown, Format |
 | `←` / `→` | Settings modal | Cycle the current row's setting (theme, toggles, cooldown, notification format) |
@@ -1065,7 +1060,7 @@ When modifying any keybinding, update **all** of the following:
 
 1. **Input handler** — the actual `match byte` in the relevant `input.rs` (screen-specific or `app/input.rs` for globals)
 2. **Help modal** — `app/help_modal/data.rs` (slide copy, e.g. Overview "This modal" section) and `app/help_modal/ui.rs` `draw_footer()` keybind line
-2a. **Terminal-help modal** — `app/terminal_help_modal/data.rs` (only when changing the `Ctrl+L` chord, the OSC 52 / mouse / notification accuracy claims, or the per-terminal click/select modifiers); also the bottom-left hint copy in `app/render.rs::app_frame_help_hint_title()`
+2a. **Guide-owned Pair/Terminal/Economy topics** — `app/help_modal/data.rs`, `app/help_modal/terminal_faq.rs`, and `app/help_modal/hub_guide.rs` when changing pairing, OSC 52 / mouse / notification accuracy claims, chip/economy facts, or per-terminal click/select modifiers; also the bottom-left hint copy in `app/render.rs::app_frame_help_hint_title()`
 3. **Settings modal** — `app/settings_modal/ui.rs` `draw_footer()` keybind line and the bordered help callout in `draw_help_callout()`
 4. **Sidebar hints** — `app/common/sidebar.rs`, e.g. the volume/mute hint line in Now Playing
 5. **Global guards** — `app/input.rs` `handle_reserved_global_chord()` for reserved control chords and `handle_global_key()` for byte shortcuts / active game suppression

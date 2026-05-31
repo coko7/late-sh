@@ -25,7 +25,6 @@ pub(crate) mod room_search_modal;
 pub mod rooms;
 pub(crate) mod settings_modal;
 pub mod state;
-pub(crate) mod terminal_help_modal;
 mod tick;
 pub(crate) mod ultimates;
 pub mod vote;

@@ -261,7 +261,7 @@ async fn global_ctrl_g_opens_hub_on_dashboard() {
 }
 
 #[tokio::test]
-async fn global_ctrl_l_opens_terminal_help_on_dashboard() {
+async fn legacy_terminal_help_byte_no_longer_opens_standalone_faq_on_dashboard() {
     let test_db = new_test_db().await;
     let user = create_test_user(&test_db.db, "ctrl-l-it").await;
     let client = test_db.db.get().await.expect("db client");
@@ -274,18 +274,17 @@ async fn global_ctrl_l_opens_terminal_help_on_dashboard() {
     let mut app = make_app(test_db.db.clone(), user.id, "ctrl-l-flow-it");
     wait_for_render_contains(&mut app, " Home ").await;
 
-    // Ctrl+L opens terminal help modal
-    app.handle_input(b"\x0c");
-    wait_for_render_contains(&mut app, "Esc/q/Ctrl+L").await;
-
-    // Ctrl+L again to close
+    // The old terminal FAQ byte no longer opens a standalone modal; those topics now live in the guide.
     app.handle_input(b"\x0c");
     tokio::time::sleep(Duration::from_millis(60)).await;
     let frame = render_plain(&mut app);
     assert!(
-        !frame.contains("Esc/q/Ctrl+L"),
-        "expected Ctrl+L to close FAQ; frame={frame:?}"
+        !frame.contains("Why copy sometimes silently fails"),
+        "expected old FAQ byte not to open standalone FAQ; frame={frame:?}"
     );
+
+    app.handle_input(b"?");
+    wait_for_render_contains(&mut app, "CLI YouTube").await;
 }
 
 #[tokio::test]
@@ -358,14 +357,14 @@ async fn question_mark_opens_guide_on_dashboard() {
     wait_for_render_contains(&mut app, " Home ").await;
 
     app.handle_input(b"?");
-    wait_for_render_contains(&mut app, "late.sh in one pass").await;
+    wait_for_render_contains(&mut app, "Install `late` / Pair Browser").await;
     wait_for_render_contains(&mut app, "?/Esc/q close").await;
 
     app.handle_input(b"?");
     tokio::time::sleep(Duration::from_millis(60)).await;
     let frame = render_plain(&mut app);
     assert!(
-        !frame.contains("late.sh in one pass"),
+        !frame.contains("Install `late` / Pair Browser"),
         "expected ? to close guide; frame={frame:?}"
     );
 }

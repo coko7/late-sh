@@ -27,7 +27,6 @@ use super::{
     dashboard, help_modal, icon_picker, mod_modal, profile_modal, quit_confirm, room_search_modal,
     settings_modal,
     state::{App, NotificationMode},
-    terminal_help_modal,
 };
 use crate::app::files::terminal_image::TerminalImageFrame;
 
@@ -240,16 +239,12 @@ struct DrawContext<'a> {
     show_cat_modal: bool,
     show_help: bool,
     help_modal_state: &'a help_modal::state::HelpModalState,
-    show_terminal_help: bool,
-    terminal_help_modal_state: &'a terminal_help_modal::state::TerminalHelpModalState,
     show_ultimate_modal: bool,
     ultimate_state: &'a crate::app::ultimates::UltimateState,
     show_splash: bool,
     splash_ticks: usize,
     splash_hint: &'a str,
-    show_pair_modal: bool,
     pair_url: &'a str,
-    pair_modal_scroll: u16,
     room_search_modal_open: bool,
     room_search_modal_state: &'a room_search_modal::state::RoomSearchModalState,
     booth_modal_open: bool,
@@ -643,9 +638,7 @@ impl App {
             || self.show_bonsai_modal
             || self.show_cat_modal
             || self.show_help
-            || self.show_terminal_help
             || self.show_splash
-            || self.show_pair_modal
             || self.icon_picker_open
             || self.room_search_modal_state.is_open()
             || self.booth_modal_state.is_open();
@@ -657,9 +650,7 @@ impl App {
             || self.show_bonsai_modal
             || self.show_cat_modal
             || self.show_help
-            || self.show_terminal_help
             || self.show_splash
-            || self.show_pair_modal
             || self.icon_picker_open
             || self.room_search_modal_state.is_open()
             || self.booth_modal_state.is_open();
@@ -752,16 +743,12 @@ impl App {
                         show_cat_modal: self.show_cat_modal,
                         show_help: self.show_help,
                         help_modal_state: &self.help_modal_state,
-                        show_terminal_help: self.show_terminal_help,
-                        terminal_help_modal_state: &self.terminal_help_modal_state,
                         show_ultimate_modal: self.show_ultimate_modal,
                         ultimate_state: &self.ultimate_state,
                         show_splash: self.show_splash,
                         splash_ticks: self.splash_ticks,
                         splash_hint: &self.splash_hint,
-                        show_pair_modal: self.show_pair_modal,
                         pair_url: &self.connect_url,
-                        pair_modal_scroll: self.pair_modal_scroll,
                         room_search_modal_open: self.room_search_modal_state.is_open(),
                         room_search_modal_state: &self.room_search_modal_state,
                         booth_modal_open: self.booth_modal_state.is_open(),
@@ -1200,11 +1187,7 @@ impl App {
         }
 
         if ctx.show_help {
-            help_modal::ui::draw(frame, inner, ctx.help_modal_state);
-        }
-
-        if ctx.show_terminal_help {
-            terminal_help_modal::ui::draw(frame, inner, ctx.terminal_help_modal_state);
+            help_modal::ui::draw(frame, inner, ctx.help_modal_state, ctx.pair_url);
         }
 
         if ctx.show_ultimate_modal {
@@ -1222,10 +1205,6 @@ impl App {
 
         if let Some(news_modal) = ctx.news_modal {
             chat::news::ui::draw_article_modal(frame, inner, news_modal);
-        }
-
-        if ctx.show_pair_modal {
-            super::common::pair_modal::draw(frame, inner, ctx.pair_url, ctx.pair_modal_scroll);
         }
 
         if ctx.room_search_modal_open {
@@ -1514,10 +1493,8 @@ fn app_frame_help_hint_title(hint_style: HelpHintStyle) -> Line<'static> {
     let hints = [
         ("Settings", ctrl_hint("O", use_caret)),
         ("Hub", ctrl_hint("G", use_caret)),
-        ("Pair", ctrl_hint("R", use_caret)),
-        ("FAQ", ctrl_hint("L", use_caret)),
-        ("Guide", "?"),
         ("Aqua", ctrl_hint("Q", use_caret)),
+        ("Guide", "?"),
     ];
 
     let mut spans = Vec::new();
@@ -1538,13 +1515,9 @@ fn ctrl_hint(key: &'static str, use_caret: bool) -> &'static str {
     match (use_caret, key) {
         (true, "O") => "^O",
         (true, "G") => "^G",
-        (true, "R") => "^R",
-        (true, "L") => "^L",
         (true, "Q") => "^Q",
         (false, "O") => "Ctrl+O",
         (false, "G") => "Ctrl+G",
-        (false, "R") => "Ctrl+R",
-        (false, "L") => "Ctrl+L",
         (false, "Q") => "Ctrl+Q",
         _ => key,
     }
@@ -1767,11 +1740,11 @@ mod tests {
     }
 
     #[test]
-    fn help_hint_title_lists_aqua_last() {
+    fn help_hint_title_lists_guide_last() {
         let help = app_frame_help_hint_title(HelpHintStyle::DottedCtrl);
         assert_eq!(
             line_text(&help),
-            " Settings Ctrl+O · Hub Ctrl+G · Pair Ctrl+R · FAQ Ctrl+L · Guide ? · Aqua Ctrl+Q "
+            " Settings Ctrl+O · Hub Ctrl+G · Aqua Ctrl+Q · Guide ? "
         );
     }
 
@@ -1782,12 +1755,9 @@ mod tests {
         let caret = app_frame_help_hint_title(HelpHintStyle::SpacedCaret);
         assert_eq!(
             line_text(&spaced),
-            " Settings Ctrl+O  Hub Ctrl+G  Pair Ctrl+R  FAQ Ctrl+L  Guide ?  Aqua Ctrl+Q "
+            " Settings Ctrl+O  Hub Ctrl+G  Aqua Ctrl+Q  Guide ? "
         );
-        assert_eq!(
-            line_text(&caret),
-            " Settings ^O  Hub ^G  Pair ^R  FAQ ^L  Guide ?  Aqua ^Q "
-        );
+        assert_eq!(line_text(&caret), " Settings ^O  Hub ^G  Aqua ^Q  Guide ? ");
 
         let (help, sponsor) = app_frame_bottom_titles((line_width(&dotted) + 2) as u16);
         assert_eq!(line_text(&help), line_text(&dotted));

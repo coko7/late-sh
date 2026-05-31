@@ -1,7 +1,6 @@
 use super::{
     audio::booth as audio_booth, chat, dashboard, help_modal, hub, icon_picker, mod_modal,
     profile_modal, quit_confirm, room_search_modal, settings_modal, state::App,
-    terminal_help_modal,
 };
 use crate::app::chat::state::RoomSection;
 use crate::app::chat::ui::{ChatRowHit, ChatRowKind, HeaderTarget};
@@ -19,9 +18,7 @@ use vte::{Params, Parser, Perform};
 
 const PENDING_ESCAPE_FLUSH_DELAY: Duration = Duration::from_millis(40);
 const CTRL_G: u8 = 0x07;
-const CTRL_L: u8 = 0x0C;
 const CTRL_O: u8 = 0x0F;
-const CTRL_R: u8 = 0x12;
 
 #[derive(Clone, Copy)]
 struct InputContext {
@@ -702,23 +699,6 @@ fn handle_parsed_input(app: &mut App, event: ParsedInput) {
         return;
     }
 
-    if app.show_pair_modal {
-        match event {
-            ParsedInput::Char('j') | ParsedInput::Char('J') | ParsedInput::Arrow(b'B') => {
-                app.pair_modal_scroll = app.pair_modal_scroll.saturating_add(1);
-            }
-            ParsedInput::Char('k') | ParsedInput::Char('K') | ParsedInput::Arrow(b'A') => {
-                app.pair_modal_scroll = app.pair_modal_scroll.saturating_sub(1);
-            }
-            _ if input_dismisses_key_modal(&event) => {
-                app.show_pair_modal = false;
-                app.pair_modal_scroll = 0;
-            }
-            _ => {}
-        }
-        return;
-    }
-
     if is_room_search_shortcut(&event) {
         if app.room_search_modal_state.is_open() {
             app.room_search_modal_state.close();
@@ -757,11 +737,6 @@ fn handle_parsed_input(app: &mut App, event: ParsedInput) {
     // Otherwise the existing modal stack owns input.
     if app.show_help {
         help_modal::input::handle_input(app, event);
-        return;
-    }
-
-    if app.show_terminal_help {
-        terminal_help_modal::input::handle_input(app, event);
         return;
     }
 
@@ -1604,10 +1579,6 @@ fn dispatch_escape(app: &mut App) {
         help_modal::input::handle_escape(app);
         return;
     }
-    if app.show_terminal_help {
-        terminal_help_modal::input::handle_escape(app);
-        return;
-    }
     if app.show_mod_modal {
         app.show_mod_modal = false;
         return;
@@ -1643,10 +1614,6 @@ fn dispatch_escape(app: &mut App) {
     }
     if app.icon_picker_open {
         app.icon_picker_open = false;
-        return;
-    }
-    if app.show_pair_modal {
-        app.show_pair_modal = false;
         return;
     }
     if app.room_search_modal_state.is_open() {
@@ -2534,8 +2501,6 @@ fn open_room_search_modal_globally(app: &mut App) {
     app.pet_state.cancel_play();
     app.show_cat_modal = false;
     app.show_settings = false;
-    app.show_terminal_help = false;
-    app.show_pair_modal = false;
     app.show_quit_confirm = false;
     app.icon_picker_open = false;
     app.chat.close_overlay();
@@ -2554,8 +2519,6 @@ fn open_settings_modal_globally(app: &mut App) {
     app.show_bonsai_v2_modal = false;
     app.pet_state.cancel_play();
     app.show_cat_modal = false;
-    app.show_terminal_help = false;
-    app.show_pair_modal = false;
     app.show_quit_confirm = false;
     app.icon_picker_open = false;
     app.chat.close_overlay();
@@ -2564,26 +2527,6 @@ fn open_settings_modal_globally(app: &mut App) {
     app.settings_modal_state
         .open_from_profile(app.profile_state.profile());
     app.show_settings = true;
-}
-
-fn open_pair_modal_globally(app: &mut App) {
-    clear_prefix_arms(app);
-    app.show_help = false;
-    app.show_mod_modal = false;
-    app.show_hub_modal = false;
-    app.show_profile_modal = false;
-    app.show_bonsai_modal = false;
-    app.show_bonsai_v2_modal = false;
-    app.pet_state.cancel_play();
-    app.show_cat_modal = false;
-    app.show_settings = false;
-    app.show_terminal_help = false;
-    app.show_quit_confirm = false;
-    app.icon_picker_open = false;
-    app.chat.close_overlay();
-    app.chat.close_news_modal();
-    app.chat.cancel_room_jump();
-    app.show_pair_modal = true;
 }
 
 fn open_hub_modal_globally(app: &mut App) {
@@ -2596,8 +2539,6 @@ fn open_hub_modal_globally(app: &mut App) {
     app.pet_state.cancel_play();
     app.show_cat_modal = false;
     app.show_settings = false;
-    app.show_terminal_help = false;
-    app.show_pair_modal = false;
     app.show_quit_confirm = false;
     app.icon_picker_open = false;
     app.chat.close_overlay();
@@ -2630,35 +2571,12 @@ fn open_bonsai_v2_modal_globally(app: &mut App) {
     app.pet_state.cancel_play();
     app.show_cat_modal = false;
     app.show_settings = false;
-    app.show_terminal_help = false;
-    app.show_pair_modal = false;
     app.show_quit_confirm = false;
     app.icon_picker_open = false;
     app.chat.close_overlay();
     app.chat.close_news_modal();
     app.chat.cancel_room_jump();
     app.show_bonsai_v2_modal = true;
-}
-
-fn open_terminal_help_modal_globally(app: &mut App) {
-    clear_prefix_arms(app);
-    app.show_help = false;
-    app.show_mod_modal = false;
-    app.show_hub_modal = false;
-    app.show_profile_modal = false;
-    app.show_bonsai_modal = false;
-    app.show_bonsai_v2_modal = false;
-    app.pet_state.cancel_play();
-    app.show_cat_modal = false;
-    app.show_settings = false;
-    app.show_pair_modal = false;
-    app.show_quit_confirm = false;
-    app.icon_picker_open = false;
-    app.chat.close_overlay();
-    app.chat.close_news_modal();
-    app.chat.cancel_room_jump();
-    app.terminal_help_modal_state.open();
-    app.show_terminal_help = true;
 }
 
 fn room_join_suffix_index(byte: u8) -> Option<usize> {
@@ -2730,28 +2648,12 @@ fn handle_reserved_global_chord(app: &mut App, event: &ParsedInput) -> bool {
     }
 
     match *byte {
-        CTRL_R => {
-            if app.show_pair_modal {
-                app.show_pair_modal = false;
-            } else {
-                open_pair_modal_globally(app);
-            }
-            true
-        }
         CTRL_O => {
             open_settings_modal_globally(app);
             true
         }
         CTRL_G => {
             open_hub_modal_globally(app);
-            true
-        }
-        CTRL_L => {
-            if app.show_terminal_help {
-                app.show_terminal_help = false;
-            } else {
-                open_terminal_help_modal_globally(app);
-            }
             true
         }
         _ => false,
@@ -2776,7 +2678,7 @@ fn handle_global_key(app: &mut App, ctx: InputContext, byte: u8) -> bool {
         app.help_modal_state
             .set_keep_composer_focused(app.profile_state.profile().keep_composer_focused);
         app.help_modal_state
-            .open(crate::app::help_modal::data::HelpTopic::Overview);
+            .open(crate::app::help_modal::data::HelpTopic::Pair);
         app.show_help = true;
         return true;
     }

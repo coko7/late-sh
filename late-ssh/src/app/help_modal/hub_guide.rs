@@ -4,50 +4,6 @@ use late_core::models::{
     chips::difficulty_bonus,
     quest::{DAILY_QUEST_STREAK_BONUS_CHIPS_PER_LEVEL, MAX_DAILY_QUEST_STREAK_BONUS_LEVEL},
 };
-use ratatui::{
-    Frame,
-    layout::{Constraint, Layout, Rect},
-    style::{Modifier, Style},
-    text::{Line, Span},
-    widgets::{Paragraph, Wrap},
-};
-
-use crate::app::common::theme;
-
-pub fn draw(frame: &mut Frame, area: Rect, scroll: u16) {
-    let sections = Layout::vertical([
-        Constraint::Length(1), // heading
-        Constraint::Length(1), // summary
-        Constraint::Length(1), // breathing
-        Constraint::Min(0),    // body
-    ])
-    .split(area);
-
-    frame.render_widget(Paragraph::new(section_heading("Guide")), sections[0]);
-    frame.render_widget(
-        Paragraph::new(Line::from(vec![
-            Span::raw("  "),
-            Span::styled(
-                "Chips, leaderboards, Arcade, and room-game controls. j/k scroll.",
-                Style::default().fg(theme::TEXT_DIM()),
-            ),
-        ])),
-        sections[1],
-    );
-
-    let max_scroll = content_line_count().saturating_sub(sections[3].height as usize) as u16;
-    let scroll = scroll.min(max_scroll);
-    frame.render_widget(
-        Paragraph::new(guide_lines())
-            .scroll((scroll, 0))
-            .wrap(Wrap { trim: false }),
-        sections[3],
-    );
-}
-
-pub(crate) fn content_line_count() -> usize {
-    guide_lines().len()
-}
 
 pub(crate) fn bot_context_lines() -> Vec<String> {
     let mut lines = Vec::new();
@@ -64,10 +20,6 @@ pub(crate) fn bot_context_lines() -> Vec<String> {
 struct GuideSection {
     title: &'static str,
     body: Vec<String>,
-}
-
-fn guide_lines() -> Vec<Line<'static>> {
-    render_sections(guide_sections())
 }
 
 fn guide_sections() -> Vec<GuideSection> {
@@ -393,44 +345,4 @@ fn room_game_sections() -> Vec<GuideSection> {
             ],
         },
     ]
-}
-
-fn render_sections(sections: Vec<GuideSection>) -> Vec<Line<'static>> {
-    let mut lines = Vec::new();
-    for section in sections {
-        if !lines.is_empty() {
-            lines.push(spacer());
-        }
-        lines.push(section_heading(section.title));
-        lines.extend(
-            section
-                .body
-                .into_iter()
-                .map(|line| text(&format!("  {line}"))),
-        );
-    }
-    lines
-}
-
-fn text(value: &str) -> Line<'static> {
-    Line::from(Span::styled(
-        value.to_string(),
-        Style::default().fg(theme::TEXT_DIM()),
-    ))
-}
-
-fn spacer() -> Line<'static> {
-    Line::from("")
-}
-
-fn section_heading(title: &str) -> Line<'static> {
-    let dim = Style::default().fg(theme::BORDER());
-    let accent = Style::default()
-        .fg(theme::AMBER())
-        .add_modifier(Modifier::BOLD);
-    Line::from(vec![
-        Span::styled("  ── ", dim),
-        Span::styled(title.to_string(), accent),
-        Span::styled(" ──", dim),
-    ])
 }

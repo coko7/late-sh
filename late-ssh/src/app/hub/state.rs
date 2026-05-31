@@ -12,17 +12,10 @@ pub enum HubTab {
     Dailies,
     Shop,
     Events,
-    Guide,
 }
 
 impl HubTab {
-    pub const ALL: [Self; 5] = [
-        Self::Shop,
-        Self::Leaderboard,
-        Self::Dailies,
-        Self::Events,
-        Self::Guide,
-    ];
+    pub const ALL: [Self; 4] = [Self::Shop, Self::Leaderboard, Self::Dailies, Self::Events];
 
     pub fn label(self) -> &'static str {
         match self {
@@ -30,7 +23,6 @@ impl HubTab {
             Self::Dailies => "Quests",
             Self::Shop => "Shop",
             Self::Events => "Events",
-            Self::Guide => "Guide",
         }
     }
 }
@@ -38,15 +30,10 @@ impl HubTab {
 #[derive(Clone, Debug)]
 pub struct HubState {
     selected_tab: HubTab,
-    guide_scroll: u16,
     /// Per-tab on-screen rectangles, populated by the renderer each frame.
     /// `tab_rects[i]` corresponds to `HubTab::ALL[i]`. Indexed in 0-based
     /// ratatui coords.
-    tab_rects: Cell<[Rect; 5]>,
-    /// Bounds of the body area (whichever tab is showing). Used to gate
-    /// scroll-wheel events so wheel ticks outside the modal body don't
-    /// scroll the guide.
-    body_area: Cell<Rect>,
+    tab_rects: Cell<[Rect; HubTab::ALL.len()]>,
     /// `(time, tab)` of the previous left-click on a tab, for double-click
     /// detection.
     last_click: Option<(Instant, HubTab)>,
@@ -56,9 +43,7 @@ impl HubState {
     pub fn new() -> Self {
         Self {
             selected_tab: HubTab::Shop,
-            guide_scroll: 0,
-            tab_rects: Cell::new([Rect::new(0, 0, 0, 0); 5]),
-            body_area: Cell::new(Rect::new(0, 0, 0, 0)),
+            tab_rects: Cell::new([Rect::new(0, 0, 0, 0); HubTab::ALL.len()]),
             last_click: None,
         }
     }
@@ -71,10 +56,6 @@ impl HubState {
         self.selected_tab
     }
 
-    pub fn guide_scroll(&self) -> u16 {
-        self.guide_scroll
-    }
-
     pub fn select_next_tab(&mut self) {
         self.selected_tab = tab_at_offset(self.selected_tab, 1);
     }
@@ -83,32 +64,8 @@ impl HubState {
         self.selected_tab = tab_at_offset(self.selected_tab, HubTab::ALL.len() - 1);
     }
 
-    pub fn scroll_guide(&mut self, delta: i16) {
-        if delta.is_negative() {
-            self.guide_scroll = self.guide_scroll.saturating_sub(delta.unsigned_abs());
-        } else {
-            let max_scroll = crate::app::hub::guide::content_line_count() as u16;
-            self.guide_scroll = self
-                .guide_scroll
-                .saturating_add(delta as u16)
-                .min(max_scroll);
-        }
-    }
-
-    pub fn jump_guide_to_top(&mut self) {
-        self.guide_scroll = 0;
-    }
-
-    pub fn jump_guide_to_bottom(&mut self) {
-        self.guide_scroll = crate::app::hub::guide::content_line_count() as u16;
-    }
-
-    pub fn set_tab_rects(&self, rects: [Rect; 5]) {
+    pub fn set_tab_rects(&self, rects: [Rect; HubTab::ALL.len()]) {
         self.tab_rects.set(rects);
-    }
-
-    pub fn set_body_area(&self, area: Rect) {
-        self.body_area.set(area);
     }
 
     /// Return the tab whose tab-strip cell contains the (0-based ratatui)
@@ -122,10 +79,6 @@ impl HubState {
                 None
             }
         })
-    }
-
-    pub fn body_contains(&self, x: u16, y: u16) -> bool {
-        rect_contains(self.body_area.get(), x, y)
     }
 
     /// Switch to the clicked tab, returning `true` if this click chained with
@@ -175,7 +128,7 @@ mod tests {
     #[test]
     fn tab_at_point_hits_set_rect() {
         let state = HubState::new();
-        let mut rects = [Rect::new(0, 0, 0, 0); 5];
+        let mut rects = [Rect::new(0, 0, 0, 0); HubTab::ALL.len()];
         rects[0] = Rect::new(2, 5, 8, 1); // Shop
         rects[1] = Rect::new(11, 5, 14, 1); // Leaderboard
         state.set_tab_rects(rects);
@@ -201,7 +154,7 @@ mod tests {
     fn click_tab_different_tab_resets_chain() {
         let mut state = HubState::new();
         state.click_tab(HubTab::Shop);
-        assert!(!state.click_tab(HubTab::Guide));
-        assert_eq!(state.selected_tab(), HubTab::Guide);
+        assert!(!state.click_tab(HubTab::Events));
+        assert_eq!(state.selected_tab(), HubTab::Events);
     }
 }

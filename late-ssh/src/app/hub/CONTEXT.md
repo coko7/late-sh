@@ -2,13 +2,13 @@
 
 ## Metadata
 - Scope: `late-ssh/src/app/hub`
-- Last updated: 2026-05-26
-- Purpose: local working context for the Hub domain: global modal, leaderboard, quests, shop, guide, Shop-unlocked aquarium, and future event surfaces.
+- Last updated: 2026-05-31
+- Purpose: local working context for the Hub domain: global modal, leaderboard, quests, shop, Shop-unlocked aquarium, and future event surfaces.
 - Parent context: `../../../../CONTEXT.md`
 
 ## Scope
 
-`late-ssh/src/app/hub` owns the global Hub modal opened with reserved global `Ctrl+G` (except active Artboard editing) and the cross-product domains surfaced inside it: Leaderboard, Shop, Quests, Events, and Guide. It also owns the Shop-unlocked Aquarium tray toggled globally with `Ctrl+Q`.
+`late-ssh/src/app/hub` owns the global Hub modal opened with reserved global `Ctrl+G` (except active Artboard editing) and the cross-product domains surfaced inside it: Shop, Leaderboard, Quests, and Events. Former Guide content now lives in the global `?` guide's Economy topic under `late-ssh/src/app/help_modal/hub_guide.rs`. Hub also owns the Shop-unlocked Aquarium tray toggled globally with `Ctrl+Q`.
 
 Hub is a cross-product domain surface. It may render Arcade, Rooms, economy, marketplace, and event information, but it must not own those runtimes. Arcade game state stays under `late-ssh/src/app/arcade`; Rooms/table runtime stays under `late-ssh/src/app/rooms`; generic chip earn/spend primitives stay in `late-core/src/models/chips.rs`. Hub-owned marketplace state and entitlement projections live under `hub/shop`.
 
@@ -17,7 +17,7 @@ Keep `mod.rs` declaration-only. Do not add `pub use` re-export layers.
 ## Source Map
 
 - `state.rs`: selected Hub tab and tab cycling.
-- `input.rs`: Hub-only key routing (`Tab`/arrows cycle, `1-5` jump, `Esc/q` close).
+- `input.rs`: Hub-only key routing (`Tab`/arrows cycle, `1-4` jump, `Esc/q` close).
 - `ui.rs`: modal frame, tabs, footer, and tab dispatch.
 - `leaderboard.rs`: compact leaderboard panels.
 - `dailies.rs`: module root for the Quests surface.
@@ -37,7 +37,6 @@ Keep `mod.rs` declaration-only. Do not add `pub use` re-export layers.
   - `state.rs`: selected category/item, snapshot/event drains, and purchase activation.
   - `input.rs`: Shop-only item/category/buy input.
   - `ui.rs`: Shop tab rendering.
-- `guide.rs`: user-facing guide for chip earning and leaderboard rules.
 - `svc.rs`: `LeaderboardService`, a shared watch-backed leaderboard refresh task.
 
 ## Tabs
@@ -46,7 +45,7 @@ Keep `mod.rs` declaration-only. Do not add `pub use` re-export layers.
 - `Quests`: functional daily/weekly quest surface.
 - `Shop`: functional marketplace surface. Pet Companion is the durable companion unlock.
 - `Events`: placeholder for seasonal/monthly event surfaces.
-- `Guide`: functional FAQ-style explanation of how chips and boards work.
+- Former `Guide`: moved to the global guide's Economy topic.
 
 If another tab is added, update `HubTab::ALL`, `HubTab::label`, `input.rs`, `ui.rs` dispatch, footer jump copy, and this file.
 
@@ -92,7 +91,7 @@ Current user-facing chip amounts:
 - Blackjack and Poker chips move through bets and pots.
 - Tic-Tac-Toe currently publishes activity wins but does not pay chips.
 
-`reward_templates` is the DB-backed source of truth for fixed minted rewards: daily puzzle base payouts, Asterion daily escape, Chess win cooldown payouts, Tron win cooldown payouts, and quest rewards. Betting games still settle from wager/pot state. Keep `guide.rs`, `dailies.rs`, root context, and Arcade/Rooms context aligned when seeded reward rows change.
+`reward_templates` is the DB-backed source of truth for fixed minted rewards: daily puzzle base payouts, Asterion daily escape, Chess win cooldown payouts, Tron win cooldown payouts, and quest rewards. Betting games still settle from wager/pot state. Keep `late-ssh/src/app/help_modal/hub_guide.rs`, `dailies.rs`, root context, and Arcade/Rooms context aligned when seeded reward rows change.
 
 ## Quests
 

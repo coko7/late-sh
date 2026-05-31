@@ -8,51 +8,6 @@ pub enum TerminalHelpTopic {
     CliYoutube,
 }
 
-impl TerminalHelpTopic {
-    pub const ALL: [TerminalHelpTopic; 6] = [
-        TerminalHelpTopic::Copy,
-        TerminalHelpTopic::Links,
-        TerminalHelpTopic::Images,
-        TerminalHelpTopic::Selection,
-        TerminalHelpTopic::Notifications,
-        TerminalHelpTopic::CliYoutube,
-    ];
-
-    pub fn short_label(self) -> &'static str {
-        match self {
-            TerminalHelpTopic::Copy => "Copy",
-            TerminalHelpTopic::Links => "Links",
-            TerminalHelpTopic::Images => "Images",
-            TerminalHelpTopic::Selection => "Selection",
-            TerminalHelpTopic::Notifications => "Notifications",
-            TerminalHelpTopic::CliYoutube => "CLI YouTube",
-        }
-    }
-
-    pub fn index(self) -> usize {
-        match self {
-            TerminalHelpTopic::Copy => 0,
-            TerminalHelpTopic::Links => 1,
-            TerminalHelpTopic::Images => 2,
-            TerminalHelpTopic::Selection => 3,
-            TerminalHelpTopic::Notifications => 4,
-            TerminalHelpTopic::CliYoutube => 5,
-        }
-    }
-}
-
-pub fn bot_context_lines() -> Vec<String> {
-    let mut out = Vec::new();
-    for topic in TerminalHelpTopic::ALL {
-        if !out.is_empty() {
-            out.push(String::new());
-        }
-        out.push(topic.short_label().to_string());
-        out.extend(lines_for(topic).into_iter().map(|line| format!("  {line}")));
-    }
-    out
-}
-
 pub fn lines_for(topic: TerminalHelpTopic) -> Vec<String> {
     match topic {
         TerminalHelpTopic::Copy => copy_lines(),

@@ -1,7 +1,10 @@
 use crate::app::ai::ghost::GRAYBEARD_MENTION_COOLDOWN;
+use crate::app::common::qr::{Barcode, HalfBlock};
+use qrcodegen::{QrCode, QrCodeEcc};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HelpTopic {
+    Pair,
     Overview,
     Architecture,
     Chat,
@@ -9,18 +12,33 @@ pub enum HelpTopic {
     Music,
     News,
     Games,
+    TerminalCopy,
+    TerminalLinks,
+    TerminalImages,
+    TerminalSelection,
+    TerminalNotifications,
+    TerminalCliYoutube,
+    Economy,
     Bonsai,
     Settings,
 }
 
 impl HelpTopic {
-    pub const ALL: [HelpTopic; 9] = [
+    pub const ALL: [HelpTopic; 17] = [
+        HelpTopic::Pair,
         HelpTopic::Overview,
         HelpTopic::Chat,
         HelpTopic::Social,
         HelpTopic::Music,
         HelpTopic::News,
         HelpTopic::Games,
+        HelpTopic::TerminalCopy,
+        HelpTopic::TerminalLinks,
+        HelpTopic::TerminalImages,
+        HelpTopic::TerminalSelection,
+        HelpTopic::TerminalNotifications,
+        HelpTopic::TerminalCliYoutube,
+        HelpTopic::Economy,
         HelpTopic::Bonsai,
         HelpTopic::Settings,
         HelpTopic::Architecture,
@@ -28,6 +46,7 @@ impl HelpTopic {
 
     pub fn title(self) -> &'static str {
         match self {
+            HelpTopic::Pair => "Pair",
             HelpTopic::Overview => "Overview",
             HelpTopic::Architecture => "Architecture",
             HelpTopic::Chat => "Chat",
@@ -35,20 +54,13 @@ impl HelpTopic {
             HelpTopic::Music => "Music",
             HelpTopic::News => "News",
             HelpTopic::Games => "Games",
-            HelpTopic::Bonsai => "Bonsai",
-            HelpTopic::Settings => "Settings",
-        }
-    }
-
-    pub fn short_label(self) -> &'static str {
-        match self {
-            HelpTopic::Overview => "Overview",
-            HelpTopic::Architecture => "Arch",
-            HelpTopic::Chat => "Chat",
-            HelpTopic::Social => "Social",
-            HelpTopic::Music => "Music",
-            HelpTopic::News => "News",
-            HelpTopic::Games => "Games",
+            HelpTopic::TerminalCopy => "Copy",
+            HelpTopic::TerminalLinks => "Links",
+            HelpTopic::TerminalImages => "Images",
+            HelpTopic::TerminalSelection => "Selection",
+            HelpTopic::TerminalNotifications => "Notifications",
+            HelpTopic::TerminalCliYoutube => "CLI YouTube",
+            HelpTopic::Economy => "Economy",
             HelpTopic::Bonsai => "Bonsai",
             HelpTopic::Settings => "Settings",
         }
@@ -56,21 +68,30 @@ impl HelpTopic {
 
     pub fn index(self) -> usize {
         match self {
-            HelpTopic::Overview => 0,
-            HelpTopic::Chat => 1,
-            HelpTopic::Social => 2,
-            HelpTopic::Music => 3,
-            HelpTopic::News => 4,
-            HelpTopic::Games => 5,
-            HelpTopic::Bonsai => 6,
-            HelpTopic::Settings => 7,
-            HelpTopic::Architecture => 8,
+            HelpTopic::Pair => 0,
+            HelpTopic::Overview => 1,
+            HelpTopic::Chat => 2,
+            HelpTopic::Social => 3,
+            HelpTopic::Music => 4,
+            HelpTopic::News => 5,
+            HelpTopic::Games => 6,
+            HelpTopic::TerminalCopy => 7,
+            HelpTopic::TerminalLinks => 8,
+            HelpTopic::TerminalImages => 9,
+            HelpTopic::TerminalSelection => 10,
+            HelpTopic::TerminalNotifications => 11,
+            HelpTopic::TerminalCliYoutube => 12,
+            HelpTopic::Economy => 13,
+            HelpTopic::Bonsai => 14,
+            HelpTopic::Settings => 15,
+            HelpTopic::Architecture => 16,
         }
     }
 }
 
-pub fn lines_for(topic: HelpTopic, keep_composer_focused: bool) -> Vec<String> {
+pub fn lines_for(topic: HelpTopic, keep_composer_focused: bool, pair_url: &str) -> Vec<String> {
     match topic {
+        HelpTopic::Pair => pair_help_lines(pair_url),
         HelpTopic::Overview => overview_lines(),
         HelpTopic::Architecture => architecture_lines(),
         HelpTopic::Chat => chat_help_lines(keep_composer_focused),
@@ -78,6 +99,25 @@ pub fn lines_for(topic: HelpTopic, keep_composer_focused: bool) -> Vec<String> {
         HelpTopic::Music => music_help_lines(),
         HelpTopic::News => news_help_lines(),
         HelpTopic::Games => games_help_lines(),
+        HelpTopic::TerminalCopy => {
+            terminal_faq_topic_lines(crate::app::help_modal::terminal_faq::TerminalHelpTopic::Copy)
+        }
+        HelpTopic::TerminalLinks => {
+            terminal_faq_topic_lines(crate::app::help_modal::terminal_faq::TerminalHelpTopic::Links)
+        }
+        HelpTopic::TerminalImages => terminal_faq_topic_lines(
+            crate::app::help_modal::terminal_faq::TerminalHelpTopic::Images,
+        ),
+        HelpTopic::TerminalSelection => terminal_faq_topic_lines(
+            crate::app::help_modal::terminal_faq::TerminalHelpTopic::Selection,
+        ),
+        HelpTopic::TerminalNotifications => terminal_faq_topic_lines(
+            crate::app::help_modal::terminal_faq::TerminalHelpTopic::Notifications,
+        ),
+        HelpTopic::TerminalCliYoutube => terminal_faq_topic_lines(
+            crate::app::help_modal::terminal_faq::TerminalHelpTopic::CliYoutube,
+        ),
+        HelpTopic::Economy => economy_lines(),
         HelpTopic::Bonsai => bonsai_help_lines(),
         HelpTopic::Settings => settings_help_lines(),
     }
@@ -96,7 +136,7 @@ pub fn bot_app_context() -> String {
         // Bot context is per-app, not per-user — describe the default Enter/
         // Alt+S binding rather than any one user's `keep_composer_focused`
         // tweak state.
-        for line in lines_for(topic, false) {
+        for line in lines_for(topic, false, "") {
             if line.trim().is_empty() {
                 continue;
             }
@@ -105,25 +145,102 @@ pub fn bot_app_context() -> String {
             out.push('\n');
         }
     }
-    out.push_str("## Hub Guide\n");
-    for line in crate::app::hub::guide::bot_context_lines() {
-        if line.trim().is_empty() {
-            continue;
-        }
-        out.push_str("- ");
-        out.push_str(line.trim());
-        out.push('\n');
+    out
+}
+
+const SHELL_INSTALL_COMMAND: &str = "curl -fsSL https://cli.late.sh/install.sh | bash";
+const WINDOWS_INSTALL_COMMAND: &str = "irm https://cli.late.sh/install.ps1 | iex";
+const NIX_COMMAND: &str = "nix run github:mpiorowski/late-sh#late";
+const SOURCE_URL: &str = "https://github.com/mpiorowski/late-sh";
+const QR_QUIET_ZONE: i32 = 4;
+
+fn pair_help_lines(pair_url: &str) -> Vec<String> {
+    let pair_url = pair_url.trim();
+    let pair_url = if pair_url.is_empty() {
+        "your pairing link appears here in-session"
+    } else {
+        pair_url
+    };
+    let mut lines = vec![
+        "Install `late` / Pair Browser".to_string(),
+        "".to_string(),
+        "Recommended: install the native CLI and run `late` instead of `ssh late.sh`.".to_string(),
+        "That gives one process for SSH, local Icecast audio, YouTube webview fallback, and OS clipboard image reads.".to_string(),
+        "".to_string(),
+        "Install".to_string(),
+        format!("  linux / macos / termux   {SHELL_INSTALL_COMMAND}"),
+        format!("  windows powershell       {WINDOWS_INSTALL_COMMAND}"),
+        format!("  nixos                    {NIX_COMMAND}"),
+        format!("  source                   git clone {SOURCE_URL}"),
+        "                           cargo build --release --bin late".to_string(),
+        "".to_string(),
+        "What `late` unlocks".to_string(),
+        "  audio       Icecast playback and visualizer on your machine".to_string(),
+        "  youtube     embedded webview hosts the shared queue locally".to_string(),
+        "  clipboard   /paste-image reads your OS clipboard image into chat".to_string(),
+        "  controls    m mute, +/- volume, v+x source, v+v Music Booth".to_string(),
+        "".to_string(),
+        "Browser pairing".to_string(),
+        "  Open this link on any device, or scan the QR below.".to_string(),
+        "  The browser plays your selected source, including YouTube.".to_string(),
+        "  A real browser takes over YouTube from the CLI webview helper while it is paired.".to_string(),
+        "".to_string(),
+    ];
+
+    lines.extend(qr_lines(pair_url));
+    lines.extend([
+        "".to_string(),
+        pair_url.to_string(),
+        "scan with your phone or open the link on any device".to_string(),
+        "".to_string(),
+        "Trouble?".to_string(),
+        "  The terminal-specific tabs below cover copy, links, images, selection, notifications, and CLI YouTube.".to_string(),
+    ]);
+    lines
+}
+
+fn qr_lines(pair_url: &str) -> Vec<String> {
+    if !(pair_url.starts_with("https://") || pair_url.starts_with("http://")) {
+        return Vec::new();
     }
-    out.push_str("## Terminal FAQ\n");
-    for line in crate::app::terminal_help_modal::data::bot_context_lines() {
-        if line.trim().is_empty() {
-            continue;
+    let Ok(qr) = QrCode::encode_text(pair_url, QrCodeEcc::Low) else {
+        return Vec::new();
+    };
+    let size = qr.size();
+    let total = size + QR_QUIET_ZONE * 2;
+    let module = |x: i32, y: i32| -> bool {
+        let mx = x - QR_QUIET_ZONE;
+        let my = y - QR_QUIET_ZONE;
+        if mx < 0 || my < 0 || mx >= size || my >= size {
+            return false;
         }
-        out.push_str("- ");
-        out.push_str(line.trim());
-        out.push('\n');
+        qr.get_module(mx, my)
+    };
+
+    let mut out = Vec::with_capacity(((total + 1) / 2) as usize);
+    let mut y = 0i32;
+    while y < total {
+        let mut row = String::with_capacity(total as usize);
+        for x in 0..total {
+            let top = module(x, y);
+            let bot = module(x, y + 1);
+            let bits = (top as u32) | ((bot as u32) << 1);
+            row.push(HalfBlock::glyph(bits));
+        }
+        out.push(format!("  {row}"));
+        y += 2;
     }
     out
+}
+
+fn terminal_faq_topic_lines(
+    topic: crate::app::help_modal::terminal_faq::TerminalHelpTopic,
+) -> Vec<String> {
+    crate::app::help_modal::terminal_faq::lines_for(topic)
+}
+
+fn economy_lines() -> Vec<String> {
+    crate::app::help_modal::hub_guide::bot_context_lines()
 }
 
 pub fn chat_help_lines(keep_composer_focused: bool) -> Vec<String> {
@@ -160,18 +277,17 @@ pub fn chat_help_lines(keep_composer_focused: bool) -> Vec<String> {
         "  /members           list users in this room",
         "  /list              list public rooms",
         "  /roll [NdM ...]    roll dice (default d20), e.g. /roll 3d6 2d20",
-        "  /paste-image       upload image from paired CLI clipboard (see Ctrl+L Images)",
-        "  /upload <url>      download and upload an image URL (see Ctrl+L Images)",
+        "  /paste-image       upload image from paired CLI clipboard (see Images)",
+        "  /upload <url>      download and upload an image URL (see Images)",
         "  /ignore [@user]    ignore a user, or list ignored users",
         "  /unignore [@user]  unignore a user, or list ignored users",
         "",
         "Global chat keys",
-        "  Ctrl+R             open install `late` / pair browser modal (QR + commands)",
         "  Ctrl+O             open your settings modal anywhere",
         "  Ctrl+G             open Hub",
         "  Ctrl+Q             toggle your Aquarium tray after unlocking it in Shop",
-        "  Ctrl+L             open terminal FAQ: copy, links, images, selection, notifications, CLI YouTube",
         "  Ctrl+/             search and jump to a room, DM, or Home entry",
+        "  ?                  open this guide; Pair and terminal-specific tabs live here",
         "",
         "Messages",
         "  j / k              select older / newer message",
@@ -241,7 +357,7 @@ pub fn chat_help_lines(keep_composer_focused: bool) -> Vec<String> {
         "Overlay windows",
         "  Esc / q            close overlay",
         "  j / k              scroll overlay",
-        "  image modal        Enter/c copy image URL; Esc/q close; see Ctrl+L Images",
+        "  image modal        Enter/c copy image URL; Esc/q close; see Images",
         "",
         "Synthetic entries",
         "  Home room rail also contains RSS, News, Showcase, Work, Mentions, and Discover.",
@@ -354,7 +470,7 @@ fn games_help_lines() -> Vec<String> {
     [
         "Games",
         "",
-        "The game surfaces are The Arcade and Rooms. This page covers getting around; Hub Guide owns per-game controls, scoring, chips, payouts, and leaderboards.",
+        "The game surfaces are The Arcade and Rooms. This page covers getting around; Economy owns per-game controls, scoring, chips, payouts, and leaderboards.",
         "",
         "Arcade",
         "  2                 open The Arcade",
@@ -379,7 +495,7 @@ fn games_help_lines() -> Vec<String> {
         "  Enter             open selected create form",
         "  first letter      shortcut to a game kind",
         "  Esc               cancel picker/form",
-        "  Game-specific forms and limits live in Hub Guide.",
+        "  Game-specific forms and limits live in the Economy tab.",
         "",
         "Active room",
         "  Layout            game on top, embedded game chat below",
@@ -397,9 +513,8 @@ fn games_help_lines() -> Vec<String> {
         "  3                 open Rooms",
         "  b then 1-4         enter one of the recent room shortcuts in lounge",
         "",
-        "Hub Guide",
-        "  Ctrl+G then 5      open the detailed games/economy guide",
-        "  Hub Guide owns Arcade game list, Arcade controls, room-game controls, chips, scoring, and leaderboards.",
+        "Economy",
+        "  Economy tab        Arcade game list, Arcade controls, room-game controls, chips, scoring, and leaderboards.",
     ]
     .into_iter()
     .map(str::to_string)
@@ -427,12 +542,11 @@ fn overview_lines() -> Vec<String> {
         "  1-5               jump straight to a screen",
         "  ?                 open this guide",
         "  q                 open quit confirm (press q again to leave)",
-        "  Ctrl+R            open install `late` / pair browser modal (QR + commands)",
         "  Ctrl+O            open Settings",
         "  Ctrl+G            open Hub",
         "  Ctrl+Q            toggle Aquarium tray after unlocking it in Shop",
-        "  Ctrl+L            terminal FAQ: copy, links, images, selection, notifications, CLI YouTube",
         "  Ctrl+/            search and jump to a room, DM, or synthetic Home entry",
+        "  ?                 open this guide; Pair and terminal-specific tabs live here",
         "  w                 open Bonsai Care when not composing",
         "  c                 open Cat Companion after unlocking it",
         "  m                 mute paired client",
@@ -454,11 +568,11 @@ fn overview_lines() -> Vec<String> {
         "  `                 cycle Dashboard / seated game rooms",
         "",
         "Hub",
-        "  Ctrl+G            open Shop, Leaderboard, Dailies, Events, Guide",
+        "  Ctrl+G            open Shop, Leaderboard, Quests, Events",
         "  Tab / Shift+Tab   switch Hub tabs",
-        "  1-5               jump to Hub tab",
+        "  1-4               jump to Hub tab",
         "  Shop              j/k select, [/] subtab, Enter buy with Late Chips",
-        "  Guide             chips, payouts, leaderboards, Arcade, room games",
+        "  Economy tab       chips, payouts, leaderboards, Arcade, room games",
         "",
         "Jump search",
         "  Ctrl+/            open / close jump modal",
@@ -636,7 +750,7 @@ fn settings_help_lines() -> Vec<String> {
         "Terminal notifications run through OSC 777 / OSC 9.".to_string(),
         "Best support today: kitty, Ghostty, rxvt-unicode, foot, wezterm, konsole, and iTerm2."
             .to_string(),
-        "tmux strips notification escapes by default; see Ctrl+L terminal FAQ for passthrough setup."
+        "tmux strips notification escapes by default; see the Notifications tab for passthrough setup."
             .to_string(),
         "Notifications can fire for DMs, mentions, friend joins, and game events.".to_string(),
         "Bell and cooldown decide how loud and how often they show up.".to_string(),
@@ -825,14 +939,14 @@ Get audio paired
       git clone https://github.com/mpiorowski/late-sh
       cargo build --release --bin late
 
-    A Nix option is shown in the Home pair modal.
+    A Nix option is shown in the Pair tab of this guide.
 
   Option 2: browser pairing
 
-    Press Ctrl+R for the install/pair modal: install hints plus a QR / link. The browser plays whichever source you have selected, including YouTube.
+    Open the Pair tab in this guide for install hints plus a QR / link. The browser plays whichever source you have selected, including YouTube.
 
 Global keys (work anywhere)
-  Ctrl+R           open install `late` / pair browser modal (QR + commands)
+  ?                open this guide, including Pair and terminal-specific tabs
   m                 mute paired client
   + / -             volume up / down
 
@@ -904,7 +1018,7 @@ mod tests {
     #[test]
     fn bot_context_includes_hub_guide_facts() {
         let context = bot_app_context();
-        assert!(context.contains("## Hub Guide\n"));
+        assert!(context.contains("## Economy\n"));
         assert!(context.contains("Monthly Top Chips counts positive earnings only."));
         assert!(context.contains("Tetris, 2048, and Snake record run scores."));
         assert!(context.contains("Blackjack form: name, pace, stake."));
@@ -914,7 +1028,9 @@ mod tests {
     #[test]
     fn bot_context_includes_terminal_faq_and_image_facts() {
         let context = bot_app_context();
-        assert!(context.contains("## Terminal FAQ\n"));
+        assert!(context.contains("## Copy\n"));
+        assert!(context.contains("## Images\n"));
+        assert!(context.contains("## CLI YouTube\n"));
         assert!(context.contains("Why copy sometimes silently fails"));
         assert!(context.contains("CLI YouTube playback"));
         assert!(context.contains("/paste-image"));
@@ -980,7 +1096,7 @@ mod tests {
     #[test]
     fn global_guide_points_to_hub_for_game_details() {
         let games = games_help_lines().join("\n");
-        assert!(games.contains("Hub Guide owns Arcade game list"));
+        assert!(games.contains("Economy tab"));
         assert!(games.contains("Rooms directory"));
         assert!(!games.contains("Tetris"));
         assert!(!games.contains("Sudoku"));

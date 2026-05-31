@@ -172,6 +172,12 @@ fn daily_streak_label_line(snapshot: &QuestSnapshot, width: usize) -> Line<'stat
     } else {
         "finish both daily quests"
     };
+    let current_bonus = format!("+{} chips", streak.current_bonus_chips);
+    let next_bonus = if streak.next_bonus_chips > 0 {
+        format!("+{} chips", streak.next_bonus_chips)
+    } else {
+        "+0 chips".to_string()
+    };
     let text = format!(
         "daily streak {} day{} / level {}/{} / current {} / next {} / {}",
         streak.consecutive_days,
@@ -182,12 +188,8 @@ fn daily_streak_label_line(snapshot: &QuestSnapshot, width: usize) -> Line<'stat
         },
         streak.bonus_level,
         MAX_DAILY_QUEST_STREAK_BONUS_LEVEL,
-        format!("+{} chips", streak.current_bonus_chips),
-        if streak.next_bonus_chips > 0 {
-            format!("+{} chips", streak.next_bonus_chips)
-        } else {
-            "+0 chips".to_string()
-        },
+        current_bonus,
+        next_bonus,
         status
     );
     Line::from(vec![
