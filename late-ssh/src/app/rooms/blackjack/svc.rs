@@ -1095,8 +1095,11 @@ impl BlackjackService {
     }
 
     fn sync_room_status(&self, in_round: bool) {
-        self.rooms_service
-            .sync_room_status_task(self.room_id, self.room_in_round.clone(), in_round);
+        self.rooms_service.sync_room_status_task(
+            self.room_id,
+            self.room_in_round.clone(),
+            in_round,
+        );
     }
 }
 

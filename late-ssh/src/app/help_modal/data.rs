@@ -147,15 +147,33 @@ pub fn bot_app_context() -> String {
         // Alt+S binding rather than any one user's `keep_composer_focused`
         // tweak state.
         for line in lines_for(topic, false, "") {
-            if line.trim().is_empty() {
+            let line = line.trim();
+            if line.is_empty() || is_restricted_bot_context_line(line) {
                 continue;
             }
             out.push_str("- ");
-            out.push_str(line.trim());
+            out.push_str(line);
             out.push('\n');
         }
     }
     out
+}
+
+fn is_restricted_bot_context_line(line: &str) -> bool {
+    let line = line.to_lowercase();
+    [
+        "/audio",
+        "/create-room",
+        "/delete-room",
+        "/fill-room",
+        "/mod",
+        "staff",
+        "admin",
+        "moderation",
+        "unskippable",
+    ]
+    .iter()
+    .any(|forbidden| line.contains(forbidden))
 }
 
 const SHELL_INSTALL_COMMAND: &str = "curl -fsSL https://cli.late.sh/install.sh | bash";

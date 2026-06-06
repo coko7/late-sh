@@ -1,5 +1,5 @@
 use crate::app::{
-    input::{sanitize_paste_markers, ParsedInput},
+    input::{ParsedInput, sanitize_paste_markers},
     state::App,
 };
 
