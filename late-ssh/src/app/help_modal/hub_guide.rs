@@ -68,9 +68,9 @@ fn quest_sections() -> Vec<GuideSection> {
             "Daily slot 1 is always an Arcade quest.".to_string(),
             "Daily slot 2 is always a multiplayer room-game quest.".to_string(),
             "Quest rewards pay automatically when the progress target completes.".to_string(),
-            "Finishing both daily quests advances your daily streak.".to_string(),
+            "Finishing any one daily quest advances your daily streak.".to_string(),
             format!(
-                "Streak bonuses start on the second consecutive full daily: +{} chips.",
+                "Streak bonuses start on the second consecutive streak day: +{} chips.",
                 DAILY_QUEST_STREAK_BONUS_CHIPS_PER_LEVEL
             ),
             format!(
