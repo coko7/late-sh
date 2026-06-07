@@ -25,7 +25,7 @@ use super::{
         theme,
     },
     dashboard, help_modal, icon_picker, mod_modal, profile_modal, quit_confirm, room_search_modal,
-    settings_modal,
+    settings_modal, sheet_modal,
     state::{App, NotificationMode},
 };
 use crate::app::files::terminal_image::TerminalImageFrame;
@@ -239,6 +239,8 @@ struct DrawContext<'a> {
     mod_modal_state: &'a mod_modal::state::ModModalState,
     show_profile_modal: bool,
     profile_modal_state: &'a profile_modal::state::ProfileModalState,
+    show_sheet_modal: bool,
+    sheet_modal_state: &'a sheet_modal::state::SheetModalState,
     show_bonsai_modal: bool,
     show_bonsai_v2_modal: bool,
     bonsai_care_state: &'a bonsai::care::BonsaiCareState,
@@ -672,6 +674,7 @@ impl App {
             || self.show_hub_modal
             || self.show_aquarium_tray
             || self.show_profile_modal
+            || self.show_sheet_modal
             || self.show_bonsai_modal
             || self.show_bonsai_v2_modal
             || self.show_cat_modal
@@ -687,6 +690,7 @@ impl App {
             || self.show_hub_modal
             || self.show_aquarium_tray
             || self.show_profile_modal
+            || self.show_sheet_modal
             || self.show_bonsai_modal
             || self.show_bonsai_v2_modal
             || self.show_cat_modal
@@ -785,6 +789,8 @@ impl App {
                         mod_modal_state: &self.mod_modal_state,
                         show_profile_modal: self.show_profile_modal,
                         profile_modal_state: &self.profile_modal_state,
+                        show_sheet_modal: self.show_sheet_modal,
+                        sheet_modal_state: &self.sheet_modal_state,
                         show_bonsai_modal: self.show_bonsai_modal,
                         show_bonsai_v2_modal: self.show_bonsai_v2_modal,
                         bonsai_care_state: &self.bonsai_care_state,
@@ -1236,6 +1242,10 @@ impl App {
 
         if ctx.show_profile_modal {
             profile_modal::ui::draw(frame, inner, ctx.profile_modal_state);
+        }
+
+        if ctx.show_sheet_modal {
+            sheet_modal::ui::draw(frame, inner, ctx.sheet_modal_state);
         }
 
         if ctx.show_bonsai_modal {

@@ -32,7 +32,7 @@ use crate::state::{ActiveUser, ActiveUsers};
 use crate::usernames::UsernameResolver;
 
 use super::{
-    commands::{rank_command_matches, room_owns_command},
+    commands::{RoomScopedCommand, rank_command_matches, room_owns_command},
     discover, feeds, news, notifications,
     notifications::svc::NotificationService,
     showcase,
@@ -340,6 +340,18 @@ pub(crate) fn is_chat_list_room(room: &ChatRoom) -> bool {
     room.kind == "dm" || room.permanent || matches!(room.visibility.as_str(), "public" | "private")
 }
 
+/// Payload handed from chat to the app layer (via `take_requested_open_sheet`)
+/// to open the character sheet modal. `editable` is true when the sheet
+/// belongs to the viewer.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SheetOpenRequest {
+    pub room_id: Uuid,
+    pub target_username: String,
+    pub name: String,
+    pub body: String,
+    pub editable: bool,
+}
+
 pub struct ChatState {
     pub(crate) service: ChatService,
     user_id: Uuid,
@@ -442,6 +454,7 @@ pub struct ChatState {
     requested_icon_picker: bool,
     requested_petname: Option<PetnameRequest>,
     requested_open_profile: Option<(Uuid, String)>,
+    requested_open_sheet: Option<SheetOpenRequest>,
     requested_quit: bool,
     requested_audio_url: Option<String>,
     requested_audio_fallback_url: Option<String>,
@@ -611,6 +624,7 @@ impl ChatState {
             requested_icon_picker: false,
             requested_petname: None,
             requested_open_profile: None,
+            requested_open_sheet: None,
             requested_quit: false,
             requested_audio_url: None,
             requested_audio_fallback_url: None,
@@ -877,6 +891,10 @@ impl ChatState {
 
     pub fn take_requested_open_profile(&mut self) -> Option<(Uuid, String)> {
         self.requested_open_profile.take()
+    }
+
+    pub fn take_requested_open_sheet(&mut self) -> Option<SheetOpenRequest> {
+        self.requested_open_sheet.take()
     }
 
     pub fn take_requested_quit(&mut self) -> bool {
@@ -1297,10 +1315,10 @@ impl ChatState {
     /// command `name`. Room-scoped command branches in `submit_composer` guard
     /// on this so they only fire in their owning room (and fall through to the
     /// "unknown command" handler elsewhere).
-    fn composer_room_owns_command(&self, name: &str) -> bool {
+    fn composer_room_owns_command(&self, command: RoomScopedCommand) -> bool {
         self.composer_room_id
             .and_then(|id| self.room_by_id(id))
-            .is_some_and(|room| room_owns_command(room, name))
+            .is_some_and(|room| room_owns_command(room, command.name()))
     }
 
     fn room_membership_command_target(&self) -> Option<Uuid> {
@@ -2206,9 +2224,15 @@ impl ChatState {
             return None;
         }
 
-        if body.trim() == "/sheet" && self.composer_room_owns_command("sheet") {
+        if let Some(target) = parse_user_command(&body, "/sheet")
+            && self.composer_room_owns_command(RoomScopedCommand::Sheet)
+        {
+            let room_id = self.composer_room_id;
             self.clear_composer_after_submit();
-            return Some(Banner::success("Character sheets are coming soon to #dnd"));
+            let room_id = room_id?;
+            self.service
+                .open_sheet_task(self.user_id, room_id, target.map(ToOwned::to_owned));
+            return None;
         }
 
         if let Some(command) = unknown_slash_command(&body) {
@@ -3240,6 +3264,25 @@ impl ChatState {
                     self.requested_open_profile = Some((target_user_id, target_username));
                 }
                 ChatEvent::OpenProfileFailed { user_id, message } if self.user_id == user_id => {
+                    banner = Some(Banner::error(&sentence_case(&message)));
+                }
+                ChatEvent::OpenSheetResolved {
+                    user_id,
+                    room_id,
+                    target_user_id,
+                    target_username,
+                    name,
+                    body,
+                } if self.user_id == user_id => {
+                    self.requested_open_sheet = Some(SheetOpenRequest {
+                        room_id,
+                        target_username,
+                        name,
+                        body,
+                        editable: target_user_id == self.user_id,
+                    });
+                }
+                ChatEvent::SheetError { user_id, message } if self.user_id == user_id => {
                     banner = Some(Banner::error(&sentence_case(&message)));
                 }
                 ChatEvent::RoomJoined {

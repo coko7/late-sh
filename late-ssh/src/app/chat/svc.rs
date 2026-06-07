@@ -14,6 +14,7 @@ use late_core::{
     MutexRecover,
     db::Db,
     models::{
+        character_sheet::{CharacterSheet, CharacterSheetParams},
         chat_message::{ChatMessage, ChatMessageParams},
         chat_message_reaction::{
             ChatMessageReaction, ChatMessageReactionOwners, ChatMessageReactionSummary,
@@ -40,6 +41,8 @@ use crate::moderation::session_effects::ModerationSessionEffects;
 use crate::session::SessionRegistry;
 use crate::state::ActiveUsers;
 use crate::usernames::UsernameDirectory;
+
+use super::commands::RoomScopedCommand;
 
 const HISTORY_LIMIT: i64 = 500;
 const DELTA_LIMIT: i64 = 256;
@@ -220,6 +223,18 @@ pub enum ChatEvent {
         target_username: String,
     },
     OpenProfileFailed {
+        user_id: Uuid,
+        message: String,
+    },
+    OpenSheetResolved {
+        user_id: Uuid,
+        room_id: Uuid,
+        target_user_id: Uuid,
+        target_username: String,
+        name: String,
+        body: String,
+    },
+    SheetError {
         user_id: Uuid,
         message: String,
     },
@@ -1473,6 +1488,156 @@ impl ChatService {
             .await?
             .ok_or_else(|| anyhow::anyhow!("user '{}' not found", target_username))?;
         Ok((target.id, target.username))
+    }
+
+    /// Resolve `/sheet [username]`: fetch the target's sheet for `room_id` and
+    /// emit `OpenSheetResolved`, or `SheetError` when the target is unknown or
+    /// (for other users only) has no sheet yet. `None` targets the caller; a
+    /// missing own sheet resolves to an empty draft so the modal opens
+    /// editable.
+    pub fn open_sheet_task(&self, user_id: Uuid, room_id: Uuid, target_username: Option<String>) {
+        let service = self.clone();
+        let span = info_span!(
+            "chat.open_sheet_task",
+            user_id = %user_id,
+            room_id = %room_id,
+        );
+        tokio::spawn(
+            async move {
+                match service
+                    .resolve_sheet(user_id, room_id, target_username)
+                    .await
+                {
+                    Ok(event) => {
+                        let _ = service.evt_tx.send(event);
+                    }
+                    Err(e) => {
+                        let _ = service.evt_tx.send(ChatEvent::SheetError {
+                            user_id,
+                            message: e.to_string(),
+                        });
+                    }
+                }
+            }
+            .instrument(span),
+        );
+    }
+
+    async fn resolve_sheet(
+        &self,
+        user_id: Uuid,
+        room_id: Uuid,
+        target_username: Option<String>,
+    ) -> Result<ChatEvent> {
+        let client = self.db.get().await?;
+        let room = self
+            .ensure_room_scoped_command_access(&client, user_id, room_id, RoomScopedCommand::Sheet)
+            .await?;
+        let (target_user_id, target_username) = match target_username {
+            Some(name) => {
+                let target = User::find_by_username(&client, &name)
+                    .await?
+                    .ok_or_else(|| anyhow::anyhow!("user '{}' not found", name))?;
+                (target.id, target.username)
+            }
+            None => {
+                let user = User::get(&client, user_id)
+                    .await?
+                    .ok_or_else(|| anyhow::anyhow!("user not found"))?;
+                (user.id, user.username)
+            }
+        };
+        if target_user_id != user_id
+            && !ChatRoomMember::is_member(&client, room_id, target_user_id).await?
+        {
+            anyhow::bail!(
+                "@{} is not a member of #{}",
+                target_username,
+                room.slug.as_deref().unwrap_or("room")
+            );
+        }
+        let sheet = CharacterSheet::find_by_user_room(&client, target_user_id, room_id).await?;
+        if sheet.is_none() && target_user_id != user_id {
+            anyhow::bail!("@{} has no character sheet here yet", target_username);
+        }
+        let (name, body) = sheet.map(|s| (s.name, s.body)).unwrap_or_default();
+        Ok(ChatEvent::OpenSheetResolved {
+            user_id,
+            room_id,
+            target_user_id,
+            target_username,
+            name,
+            body,
+        })
+    }
+
+    /// Persist a sheet edit. Success is silent (the modal already shows the
+    /// committed state); failure surfaces as a chat banner via `SheetError`.
+    pub fn save_sheet_task(&self, user_id: Uuid, room_id: Uuid, name: String, body: String) {
+        let service = self.clone();
+        let span = info_span!(
+            "chat.save_sheet_task",
+            user_id = %user_id,
+            room_id = %room_id,
+        );
+        tokio::spawn(
+            async move {
+                if let Err(e) = service.save_sheet(user_id, room_id, name, body).await {
+                    let _ = service.evt_tx.send(ChatEvent::SheetError {
+                        user_id,
+                        message: format!("failed to save sheet: {e}"),
+                    });
+                }
+            }
+            .instrument(span),
+        );
+    }
+
+    async fn save_sheet(
+        &self,
+        user_id: Uuid,
+        room_id: Uuid,
+        name: String,
+        body: String,
+    ) -> Result<()> {
+        let client = self.db.get().await?;
+        self.ensure_room_scoped_command_access(&client, user_id, room_id, RoomScopedCommand::Sheet)
+            .await?;
+        CharacterSheet::upsert(
+            &client,
+            CharacterSheetParams {
+                user_id,
+                room_id,
+                name,
+                body,
+            },
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn ensure_room_scoped_command_access(
+        &self,
+        client: &Client,
+        user_id: Uuid,
+        room_id: Uuid,
+        command: RoomScopedCommand,
+    ) -> Result<ChatRoom> {
+        let room = ChatRoom::get(client, room_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Room not found"))?;
+        if !command.available_in(&room) {
+            anyhow::bail!(
+                "/{} is only available in #{}",
+                command.name(),
+                command.room_slug()
+            );
+        }
+        let is_member = ChatRoomMember::is_member(client, room_id, user_id).await?;
+        if !is_member {
+            anyhow::bail!("You are not a member of this room");
+        }
+        Ok(room)
     }
 
     pub fn list_room_members_task(&self, user_id: Uuid, room_id: Uuid) {
