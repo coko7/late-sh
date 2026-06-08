@@ -1,8 +1,12 @@
-use anyhow::{Context, Result};
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+use anyhow::Context;
+use anyhow::Result;
+#[cfg(any(target_os = "linux", target_os = "windows"))]
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
+#[cfg(any(target_os = "linux", target_os = "windows"))]
 use tracing::{debug, info, warn};
 
 #[cfg(any(target_os = "linux", target_os = "windows"))]
